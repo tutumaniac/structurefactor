@@ -1,0 +1,78 @@
+<html>
+<body>
+<div id="app">
+	<select v-on:change="doSome" v-model="selected">
+		<option disabled value="">Please select one</option>
+		<option v-for="crystal in crystals" v-bind:value="crystal.crystal_id"> {{ crystal.name }} </option>
+	</select>
+	<div id="myDiv">
+	</div>
+</div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script src="https://cdn.plot.ly/plotly-1.2.0.min.js"></script>
+<script>
+var app
+var base_url = 'http://localhost:5000'
+
+function plot(basis) {
+	
+	var x = []
+	var y = []
+	var z = []
+	
+	for (atom of basis.atoms) {
+		x.push(atom.x)
+		y.push(atom.y)
+		z.push(atom.z)
+	}
+
+	var trace1 = {
+		x:x,
+		y:y,
+		z:z,
+		mode: 'markers',
+		marker: {
+			size: 12,
+			line: {
+			color: 'rgba(217, 217, 217, 0.14)',
+			width: 0.5},
+			opacity: 0.8},
+		type: 'scatter3d'
+	};
+
+	var data = [trace1];
+	var layout = {margin: {
+		l: 0,
+		r: 0,
+		b: 0,
+		t: 0
+	  }};
+	Plotly.newPlot('myDiv', data, layout);
+}
+
+async function defApp() {
+	let response = await fetch(`${base_url}/data/crystals`)
+	data = await response.json()
+	
+	app = new Vue({
+	  el: '#app',
+	  data: {
+		crystals: data,
+		crystal: [],
+		selected:''
+	  },
+	  methods:{
+		doSome: async function() {
+			let response = await fetch(`${base_url}/data/crystals/${this.selected}`);
+			data = await response.json();
+			this.crystal = data;
+			plot(this.crystal.bulk)
+		}
+	  }
+	})
+}
+
+defApp()
+</script>
+</html>
