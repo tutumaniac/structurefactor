@@ -1,11 +1,21 @@
 <html>
 <body>
 <div id="app">
-	<select v-on:change="doSome" v-model="selected">
+	<select v-on:change="loadCrystal" v-model="selected">
 		<option disabled value="">Please select one</option>
 		<option v-for="crystal in crystals" v-bind:value="crystal.crystal_id"> {{ crystal.name }} </option>
 	</select>
 	<div id="myDiv">
+	</div>
+	<div v-if="crystal !== null">
+		<label>name: </label> <label>element: </label> <label>x: </label> <label>y: </label> <label>z: </label> 
+		<div v-for="atom in crystal.bulk.atoms">
+			<input v-model="atom.name" type="text">
+			<input v-model="atom.element" type="text">
+			<input v-model="atom.x" type="number">
+			<input v-model="atom.y" type="number">
+			<input v-model="atom.z" type="number">
+		</div>
 	</div>
 </div>
 </body>
@@ -15,40 +25,88 @@
 var app
 var base_url = 'http://localhost:5000'
 
-function plot(basis) {
+async function plot(selected) {
 	
-	var x = []
-	var y = []
-	var z = []
+	// var x = []
+	// var y = []
+	// var z = []
 	
-	for (atom of basis.atoms) {
-		x.push(atom.x)
-		y.push(atom.y)
-		z.push(atom.z)
+	// for (atom of basis.atoms) {
+	// 	x.push(atom.x)
+	// 	y.push(atom.y)
+	// 	z.push(atom.z)
+	// }
+
+	// var trace1 = {
+	// 	x:x,
+	// 	y:y,
+	// 	z:z,
+	// 	mode: 'markers',
+	// 	marker: {
+	// 		size: 12,
+	// 		line: {
+	// 		color: 'rgba(217, 217, 217, 0.14)',
+	// 		width: 0.5},
+	// 		opacity: 0.8},
+	// 	type: 'scatter3d'
+	// };
+
+	// var x_bonds = []
+	// var y_bonds = []
+	// var z_bonds = []
+	
+	// for (bond of basis.bonds) {
+	// 	var atom1 = bond.atom1
+	// 	var atom2 = bond.atom2
+
+	// 	var num_atoms = 0
+	// 	for (atom of basis.atoms) {
+	// 		if ( (atom.name === atom1) | (atom.name === atom2) ){
+	// 			x_bonds.push(atom.x)
+	// 			y_bonds.push(atom.y)
+	// 			z_bonds.push(atom.z)
+	// 			num_atoms = num_atoms + 1
+	// 		}
+			
+	// 		if (num_atoms === 2) {
+	// 			x_bonds.push(null)
+	// 			y_bonds.push(null)
+	// 			z_bonds.push(null)
+	// 			break
+	// 		}
+	// 	}
+	// }
+	
+	// var trace2 = {
+	// 	x:x_bonds,
+	// 	y:y_bonds,
+	// 	z:z_bonds,
+	// 	mode: 'marker+lines',
+	// 	type: 'scatter3d',
+	// 	line: {
+	// 		color: "rgb(255, 0, 0)",
+    //   		width: 2
+	// 	},
+	// 	connectgaps:false
+	// };
+
+	// var data = [trace1, trace2];
+	// var layout = {margin: {
+	// 	l: 0,
+	// 	r: 0,
+	// 	b: 0,
+	// 	t: 0
+	//   }};
+
+	// Plotly.newPlot('myDiv', data, layout);
+	let resp = await fetch(`${base_url}/data/crystals/${selected}/bulk/plotdata`)
+	plotData = await resp.json();
+
+	for (data of plotData.data) {
+		data.connectgaps = false
 	}
-
-	var trace1 = {
-		x:x,
-		y:y,
-		z:z,
-		mode: 'markers',
-		marker: {
-			size: 12,
-			line: {
-			color: 'rgba(217, 217, 217, 0.14)',
-			width: 0.5},
-			opacity: 0.8},
-		type: 'scatter3d'
-	};
-
-	var data = [trace1];
-	var layout = {margin: {
-		l: 0,
-		r: 0,
-		b: 0,
-		t: 0
-	  }};
-	Plotly.newPlot('myDiv', data, layout);
+	console.log(plotData)
+	Plotly.newPlot('myDiv', plotData.data, plotData.layout);
 }
 
 async function defApp() {
@@ -59,15 +117,34 @@ async function defApp() {
 	  el: '#app',
 	  data: {
 		crystals: data,
-		crystal: [],
+		crystal: null,
 		selected:''
 	  },
-	  methods:{
-		doSome: async function() {
+	  watch: {
+		  crystal: {
+			  async handler () {
+				  console.log(this.crystal)
+				  let resp = await fetch(
+					  `${base_url}/data/crystals/${this.selected}`,
+					  {
+						  method: 'PUT',
+						  mode: 'cors',
+						  body: JSON.stringify(this.crystal),
+						  headers: {
+							  'Content-Type': 'application/json'
+						},
+					  }
+					)
+				plot(this.selected)  
+				},
+				deep: true
+		  }
+	  },
+	  methods: {
+		loadCrystal: async function() {
 			let response = await fetch(`${base_url}/data/crystals/${this.selected}`);
 			data = await response.json();
 			this.crystal = data;
-			plot(this.crystal.bulk)
 		}
 	  }
 	})

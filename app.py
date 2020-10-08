@@ -56,6 +56,14 @@ class Structurefactor(Resource):
     def get(self, crystal_id):
         return {'hello':'world'}
 
+
+@data.route('/crystals/<string:crystal_id>/bulk/plotdata')
+class Plotdata(Resource):
+    def get(self, crystal_id):
+        crystal = db.dget('crystals', crystal_id)
+        return crystal.bulk.getPlotData(), 200
+
+
 # @data.route('/crystals/<int:crystal_id>/basis')
 # class Basis(Resource):
 #     def get(self, id):
