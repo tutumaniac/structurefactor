@@ -8,13 +8,9 @@
 	<div id="myDiv">
 	</div>
 	<div v-if="crystal !== null">
-		<label>name: </label> <label>element: </label> <label>x: </label> <label>y: </label> <label>z: </label> 
+		<label>name: </label> <label>element: </label> <label>x: </label> <label>y: </label> <label>z: </label> <label>occupation: </label>
 		<div v-for="atom in crystal.bulk.atoms">
-			<input v-model="atom.name" type="text">
-			<input v-model="atom.element" type="text">
-			<input v-model="atom.x" type="number">
-			<input v-model="atom.y" type="number">
-			<input v-model="atom.z" type="number">
+			<Atom v-bind:atom="atom" v-on:save-atom="saveAtom" v-on:remove-atom="removeAtom"></Atom>
 		</div>
 	</div>
 </div>
@@ -109,6 +105,50 @@ async function plot(selected) {
 	Plotly.newPlot('myDiv', plotData.data, plotData.layout);
 }
 
+Vue.component('Atom', {
+	props: ['atom'],
+	data: function() {
+		return {
+			isExpanded: false
+		}
+	},
+	methods: {
+		getValues: function () {
+			var div = document.getElementById(this.atom.name);
+			var inputs = div.getElementsByTagName('input');
+
+			return {
+				name: inputs.name.value,
+				element: inputs.element.value,
+				x: parseFloat(inputs.x.value),
+				y: parseFloat(inputs.y.value),
+				z: parseFloat(inputs.z.value),
+				occupation: parseFloat(inputs.occupation.value)
+			}
+		}
+	},
+	template: `
+	<div>
+		<label>{{atom.name}}</label> <label>{{atom.element}}</label> <label>{{atom.x}}</label> <label>{{atom.y}}</label> <label>{{atom.z}}</label> <button v-on:click="isExpanded=(isExpanded==true ? false : true)"> Change </button> <button v-on:click="$emit('remove-atom', atom.name)"> Remove </button>
+		<div v-if="isExpanded" v-bind:id="atom.name">
+			<br>
+			<label>name: </label> <input v-bind:value="atom.name" id="name" type="text">
+			<br>
+			<label>element: </label> <input v-bind:value="atom.element" type="text"  id="element">
+			<br>
+			<label>x: </label> <input v-bind:value="atom.x" type="number"  id="x">
+			<br>
+			<label>y: </label> <input v-bind:value="atom.y" type="number" id="y">
+			<br>
+			<label>z: </label> <input v-bind:value="atom.z" type="number" id="z">
+			<br>
+			<label>occupation: </label> <input v-bind:value="atom.occupation" type="number" id="occupation">
+			<button v-on:click="$emit('save-atom', getValues())"> Save </button>
+		</div>
+	</div>
+	`
+})
+
 async function defApp() {
 	let response = await fetch(`${base_url}/data/crystals`)
 	data = await response.json()
@@ -123,7 +163,6 @@ async function defApp() {
 	  watch: {
 		  crystal: {
 			  async handler () {
-				  console.log(this.crystal)
 				  let resp = await fetch(
 					  `${base_url}/data/crystals/${this.selected}`,
 					  {
@@ -145,6 +184,44 @@ async function defApp() {
 			let response = await fetch(`${base_url}/data/crystals/${this.selected}`);
 			data = await response.json();
 			this.crystal = data;
+		},
+		saveAtom: async function (newAtom) {
+			var i = 0
+			var atoms = []
+			for (atom of this.crystal.bulk.atoms) {
+				if (atom.name === newAtom.name) {
+					atoms.push(newAtom)
+				} else {
+					atoms.push(atom)
+				}
+			}
+
+			crystal = { ...this.crystal }
+			crystal.bulk.atoms = atoms
+
+			this.crystal = crystal
+		},
+		removeAtom: async function (name) {
+			
+			var atoms = []
+			for (atom of this.crystal.bulk.atoms) {
+				if (atom.name !== name) {
+					atoms.push(atom)
+				}
+			}
+
+			var bonds = []
+			for (bond of this.crystal.bulk.bonds) {
+				if ( (bond.atom1 !== name) && (bond.atom2 !== name) ) {
+					bonds.push(bond)
+				}
+			}
+
+			crystal = { ...this.crystal }
+			crystal.bulk.atoms = atoms
+			crystal.bulk.bonds = bonds
+
+			this.crystal = crystal
 		}
 	  }
 	})
