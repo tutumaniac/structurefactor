@@ -167,6 +167,21 @@ class Basis():
         }
 
     def getPlotData(self):
+        """Create a Plotly dictionary containing the plotting data for the objects
+
+        Extended description of function.
+
+        Parameters
+        ----------
+        self : Basis
+            Instance of the Class
+
+        Returns
+        -------
+        dict
+            Dictionary containing the Plotly figure
+
+        """
         x = []
         y = []
         z = []
